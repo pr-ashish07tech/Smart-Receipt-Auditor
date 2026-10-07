@@ -21,3 +21,10 @@ An AI-powered expense auditing application built for fast, accurate receipt proc
    npm install
    # Add GEMINI_API_KEY in .env file
    node server.js
+
+2. Frontend Setup:
+
+   Bash
+   cd auditor-frontend
+   npm install
+   npm run dev
