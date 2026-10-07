@@ -1,3 +1,7 @@
+import { 
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+  PieChart, Pie
+} from 'recharts';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import {
@@ -9,6 +13,81 @@ import {
 const API_BASE = 'https://smart-receipt-auditor.onrender.com';
 const MAX_MB = 10;
 const CURRENCIES = { USD: '$', INR: '₹', EUR: '€', GBP: '£' };
+
+/* ---------- Analytics Charts Component ---------- */
+const AnalyticsCharts = ({ result, currencySymbol }) => {
+  if (!result) return null;
+
+  // Bar Chart Data (Line Items)
+  const items = result.items || [];
+  const barData = items.map((item) => ({
+    name: item.name ? (item.name.length > 12 ? item.name.substring(0, 12) + '...' : item.name) : 'Item',
+    amount: Number(item.price) || 0,
+  }));
+
+  // Pie Chart Data (Subtotal vs Tax)
+  const subtotal = items.reduce((s, i) => s + (Number(i.price) || 0), 0);
+  const tax = Number(result.tax) || 0;
+  
+  const pieData = [
+    { name: 'Subtotal', value: subtotal, color: '#6366f1' },
+    { name: 'Tax', value: tax, color: '#34d399' },
+  ].filter(d => d.value > 0);
+
+  return (
+    <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-900/70 border border-slate-800 p-6 rounded-2xl shadow-lg shadow-black/20">
+      {/* Bar Chart */}
+      <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+        <h4 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
+          📦 Line Items Cost Breakdown
+        </h4>
+        <div className="h-52 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={barData}>
+              <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} />
+              <YAxis stroke="#94a3b8" fontSize={11} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff' }}
+                formatter={(val) => [`${currencySymbol}${val}`, 'Amount']}
+              />
+              <Bar dataKey="amount" fill="#818cf8" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Pie Chart */}
+      <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+        <h4 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
+          🍕 Subtotal vs Tax Ratio
+        </h4>
+        <div className="h-52 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={pieData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={65}
+                label={(entry) => `${entry.name}: ${currencySymbol}${entry.value}`}
+              >
+                {pieData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff' }}
+                formatter={(val) => [`${currencySymbol}${val}`, 'Value']}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 /* ---------- helpers ---------- */
 const money = (n, cur) =>
@@ -414,6 +493,9 @@ export default function App() {
                 </div>
               )}
             </div>
+
+            {/* Visual Analytics Charts (Bar Chart & Pie Chart) */}
+            <AnalyticsCharts result={result} currencySymbol={CURRENCIES[currency]} />
           </section>
         )}
 
@@ -422,7 +504,7 @@ export default function App() {
         </footer>
       </main>
 
-      {/* scan-line keyframes (kept inline so no tailwind.config change is needed) */}
+      {/* scan-line keyframes */}
       <style>{`@keyframes scan { 0% { top: -3rem } 50% { top: calc(100% - 0rem) } 100% { top: -3rem } }`}</style>
     </div>
   );
