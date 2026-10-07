@@ -6,7 +6,7 @@ import {
   CheckCircle2, ImageIcon, RotateCcw, Sparkles,
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:5000';
+const API_BASE = 'https://smart-receipt-auditor.onrender.com';
 const MAX_MB = 10;
 const CURRENCIES = { USD: '$', INR: '₹', EUR: '€', GBP: '£' };
 
