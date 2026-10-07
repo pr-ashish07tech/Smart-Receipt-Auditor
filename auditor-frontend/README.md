@@ -28,3 +28,6 @@ An AI-powered expense auditing application built for fast, accurate receipt proc
    cd auditor-frontend
    npm install
    npm run dev
+
+---
+**Project Status:** Version 1.0.0 — Ready for Evaluation

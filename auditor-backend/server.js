@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import multer from 'multer';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 
 dotenv.config();
 
@@ -26,22 +26,38 @@ app.post('/api/audit', upload.single('receipt'), async (req, res) => {
       },
     };
 
-    const prompt = `Analyze this receipt image and return ONLY a JSON object with:
-    {
-      "vendor": "Store/Company Name",
-      "date": "YYYY-MM-DD",
-      "totalAmount": number,
-      "tax": number,
-      "items": [{"name": "item description", "price": number}]
-    }`;
+    const prompt = 'Analyze this receipt image and extract the requested fields.';
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: [prompt, imagePart],
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            vendor: { type: Type.STRING },
+            date: { type: Type.STRING },
+            totalAmount: { type: Type.NUMBER },
+            tax: { type: Type.NUMBER },
+            items: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  name: { type: Type.STRING },
+                  price: { type: Type.NUMBER },
+                },
+                required: ['name', 'price'],
+              },
+            },
+          },
+          required: ['vendor', 'date', 'totalAmount', 'tax', 'items'],
+        },
+      },
     });
 
-    const cleanJson = response.text.replace(/```json|```/g, '').trim();
-    const data = JSON.parse(cleanJson);
+    const data = JSON.parse(response.text);
 
     res.json({ success: true, data });
   } catch (err) {
