@@ -1,122 +1,116 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import React, { useState } from 'react';
+import axios from 'axios';
+import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState('');
+
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setPreview(URL.createObjectURL(selectedFile));
+      setResult(null);
+      setError('');
+    }
+  };
+
+  const handleAudit = async () => {
+    if (!file) {
+      setError('Please select a receipt image first.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+
+    const formData = new FormData();
+    formData.append('receipt', file);
+
+    try {
+      const res = await axios.post('http://localhost:5000/api/audit', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      if (res.data.success) {
+        setResult(res.data.data);
+      } else {
+        setError('Audit failed to parse response.');
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Server error during audit.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="container">
+      <header className="header">
+        <h1>Smart Receipt & Invoice Snapshot Auditor</h1>
+        <p>AI-Powered Expense Auditing with Gemini Vision</p>
+      </header>
 
-      <div className="ticks"></div>
+      <main className="main-content">
+        <section className="upload-section">
+          <div className="file-input-wrapper">
+            <input type="file" accept="image/*" onChange={handleFileChange} id="receipt-input" />
+            <label htmlFor="receipt-input" className="file-label">
+              {file ? file.name : 'Choose Receipt / Invoice Image'}
+            </label>
+          </div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+          {preview && (
+            <div className="preview-container">
+              <img src={preview} alt="Receipt Preview" className="receipt-preview" />
+            </div>
+          )}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+          <button onClick={handleAudit} disabled={loading} className="audit-btn">
+            {loading ? 'Auditing Receipt...' : 'Run Snapshot Audit'}
+          </button>
+
+          {error && <p className="error-msg">{error}</p>}
+        </section>
+
+        {result && (
+          <section className="result-section">
+            <h2>Audit Result Report</h2>
+            <div className="report-card">
+              <p><strong>Vendor:</strong> {result.vendor || 'N/A'}</p>
+              <p><strong>Date:</strong> {result.date || 'N/A'}</p>
+              <p><strong>Total Amount:</strong> ${result.totalAmount || 0}</p>
+              <p><strong>Tax:</strong> ${result.tax || 0}</p>
+
+              <h3>Line Items</h3>
+              {result.items && result.items.length > 0 ? (
+                <table className="items-table">
+                  <thead>
+                    <tr>
+                      <th>Description</th>
+                      <th>Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.items.map((item, idx) => (
+                      <tr key={idx}>
+                        <td>{item.name}</td>
+                        <td>${item.price}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p>No individual line items extracted.</p>
+              )}
+            </div>
+          </section>
+        )}
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;
